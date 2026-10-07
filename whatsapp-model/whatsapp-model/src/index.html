@@ -1,0 +1,554 @@
+<title>Chatline Web</title>
+<style>
+/* Layout: two-pane messenger. Chat list (30%) left, conversation right; below 760px one pane shows at a time. */
+:root {
+  --app-bg: #d1d7db;
+  --panel: #ffffff;
+  --panel-alt: #f0f2f5;
+  --header: #f0f2f5;
+  --accent: #00a884;
+  --accent-strong: #008069;
+  --accent-ink: #ffffff;
+  --text: #111b21;
+  --text-2: #667781;
+  --line: #e9edef;
+  --hover: #f5f6f6;
+  --active: #f0f2f5;
+  --chat-bg: #efeae2;
+  --doodle: rgba(11, 20, 26, 0.045);
+  --bubble-in: #ffffff;
+  --bubble-out: #d9fdd3;
+  --bubble-text: #111b21;
+  --bubble-meta: #667781;
+  --chip: #ffffff;
+  --chip-text: #54656f;
+  --icon: #54656f;
+  --read: #53bdeb;
+  --badge: #25d366;
+  --badge-ink: #ffffff;
+  --input-bg: #ffffff;
+  --shadow: rgba(11, 20, 26, 0.13);
+  --font: "Segoe UI", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --app-bg: #0c1317;
+    --panel: #111b21;
+    --panel-alt: #202c33;
+    --header: #202c33;
+    --accent: #00a884;
+    --accent-strong: #00a884;
+    --accent-ink: #111b21;
+    --text: #e9edef;
+    --text-2: #8696a0;
+    --line: #222d34;
+    --hover: #202c33;
+    --active: #2a3942;
+    --chat-bg: #0b141a;
+    --doodle: rgba(233, 237, 239, 0.035);
+    --bubble-in: #202c33;
+    --bubble-out: #005c4b;
+    --bubble-text: #e9edef;
+    --bubble-meta: #8696a0;
+    --chip: #182229;
+    --chip-text: #8696a0;
+    --icon: #aebac1;
+    --read: #53bdeb;
+    --badge: #00a884;
+    --badge-ink: #111b21;
+    --input-bg: #2a3942;
+    --shadow: rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --app-bg: #0c1317;
+  --panel: #111b21;
+  --panel-alt: #202c33;
+  --header: #202c33;
+  --accent: #00a884;
+  --accent-strong: #00a884;
+  --accent-ink: #111b21;
+  --text: #e9edef;
+  --text-2: #8696a0;
+  --line: #222d34;
+  --hover: #202c33;
+  --active: #2a3942;
+  --chat-bg: #0b141a;
+  --doodle: rgba(233, 237, 239, 0.035);
+  --bubble-in: #202c33;
+  --bubble-out: #005c4b;
+  --bubble-text: #e9edef;
+  --bubble-meta: #8696a0;
+  --chip: #182229;
+  --chip-text: #8696a0;
+  --icon: #aebac1;
+  --read: #53bdeb;
+  --badge: #00a884;
+  --badge-ink: #111b21;
+  --input-bg: #2a3942;
+  --shadow: rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--app-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.35;
+  margin: 0;
+  overflow: hidden;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible, .chat-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+svg { display: block; flex: none; }
+
+/* ---------- Shell ---------- */
+.app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+  background: var(--panel);
+  box-shadow: 0 6px 18px var(--shadow);
+}
+@media (min-width: 640px) {
+  body { padding-block: 20px; }
+}
+
+.icon-btn {
+  width: 40px; height: 40px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  color: var(--icon);
+}
+.icon-btn:hover { background: var(--active); }
+
+/* ---------- Avatars ---------- */
+.avatar {
+  width: 49px; height: 49px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  flex: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+.avatar.sm { width: 40px; height: 40px; font-size: 15px; }
+.av-1 { background: #00a884; }
+.av-2 { background: #5e47de; }
+.av-3 { background: #d6567a; }
+.av-4 { background: #e08a1e; }
+.av-5 { background: #2b8fd6; }
+.av-6 { background: #8a6d3b; }
+.av-7 { background: #4c7a63; }
+.av-8 { background: #b23a48; }
+.av-9 { background: #6a7b87; }
+.avatar svg { width: 60%; height: 60%; }
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  display: flex; flex-direction: column;
+  min-width: 0; min-height: 0;
+  background: var(--panel);
+}
+.side-head {
+  height: 59px;
+  padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--header);
+}
+.side-head .brand { font-size: 20px; font-weight: 700; color: var(--accent-strong); letter-spacing: -0.01em; }
+.side-head .actions { display: flex; gap: 4px; }
+.me { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+.search-wrap { padding: 8px 12px; background: var(--panel); }
+.search {
+  display: flex; align-items: center; gap: 14px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--panel-alt);
+  color: var(--text-2);
+}
+.search input {
+  flex: 1; min-width: 0;
+  border: 0; background: transparent;
+  font: inherit; color: var(--text);
+  outline: none;
+}
+.search input::placeholder { color: var(--text-2); }
+.search:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.filters { display: flex; gap: 8px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; }
+.filters::-webkit-scrollbar { display: none; }
+.filter {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--panel-alt);
+  color: var(--text-2);
+  font-size: 14px;
+  white-space: nowrap;
+}
+.filter.on { background: #d9fdd3; color: #005c4b; font-weight: 600; }
+:root[data-theme="dark"] .filter.on { background: #103529; color: #06cf9c; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .filter.on { background: #103529; color: #06cf9c; }
+}
+
+.chat-list { flex: 1; min-height: 0; overflow-y: auto; list-style: none; margin: 0; padding: 0; }
+.chat-item {
+  text-decoration: none; color: inherit;
+  display: flex; align-items: center; gap: 15px;
+  padding: 0 16px;
+  min-height: 72px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+.chat-item:hover { background: var(--hover); }
+.chat-item.active { background: var(--active); }
+.chat-body {
+  flex: 1; min-width: 0;
+  min-height: 72px;
+  padding: 12px 0;
+  display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  border-bottom: 1px solid var(--line);
+}
+.chat-item:last-child .chat-body { border-bottom: 0; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
+.name { font-size: 17px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.time { font-size: 12px; color: var(--text-2); flex: none; font-variant-numeric: tabular-nums; }
+.time.unread { color: var(--accent); }
+.preview {
+  display: flex; align-items: center; gap: 3px;
+  color: var(--text-2); font-size: 14px;
+  min-width: 0; flex: 1;
+}
+.preview span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.preview .tick { color: var(--text-2); }
+.preview .tick.read { color: var(--read); }
+.preview svg { width: 18px; height: 18px; }
+.badge {
+  min-width: 20px; height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--badge); color: var(--badge-ink);
+  font-size: 12px; font-weight: 600;
+  display: grid; place-items: center;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.badge.muted { background: var(--text-2); color: var(--panel); }
+
+/* ---------- Conversation ---------- */
+.chat {
+  display: flex; flex-direction: column;
+  min-width: 0; min-height: 0;
+  background: var(--chat-bg);
+  position: relative;
+}
+.chat-head {
+  height: 59px;
+  padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px;
+  background: var(--header);
+  border-bottom: 1px solid var(--line);
+  z-index: 1;
+}
+.chat-head .who { flex: 1; min-width: 0; }
+.chat-head .who strong { display: block; font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-head .who small { display: block; font-size: 13px; color: var(--text-2); }
+.chat-head .actions { display: flex; gap: 4px; }
+.back { display: none; margin-left: -8px; }
+
+.messages {
+  flex: 1; min-height: 0;
+  overflow-y: auto;
+  padding: 18px clamp(16px, 6%, 64px) 14px;
+  display: flex; flex-direction: column-reverse;
+  background-image:
+    radial-gradient(circle at 20px 20px, var(--doodle) 2px, transparent 2.5px),
+    radial-gradient(circle at 60px 56px, var(--doodle) 3px, transparent 3.5px);
+  background-size: 80px 80px;
+}
+.stack { display: flex; flex-direction: column; gap: 2px; }
+.day {
+  align-self: center;
+  margin: 6px 0 12px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: var(--chip); color: var(--chip-text);
+  font-size: 12.5px;
+  box-shadow: 0 1px 0.5px var(--shadow);
+}
+.msg {
+  position: relative;
+  max-width: min(65%, 560px);
+  padding: 6px 7px 8px 9px;
+  border-radius: 8px;
+  background: var(--bubble-in);
+  color: var(--bubble-text);
+  box-shadow: 0 1px 0.5px var(--shadow);
+  font-size: 14.2px;
+  line-height: 19px;
+  overflow-wrap: anywhere;
+}
+.msg.in { align-self: flex-start; border-top-left-radius: 0; }
+.msg.out { align-self: flex-end; background: var(--bubble-out); border-top-right-radius: 0; }
+.msg.cont { margin-top: 0; }
+.msg.cont.in { border-top-left-radius: 8px; }
+.msg.cont.out { border-top-right-radius: 8px; }
+.msg.first { margin-top: 10px; }
+.msg.first.in::before, .msg.first.out::before {
+  content: "";
+  position: absolute; top: 0;
+  width: 8px; height: 13px;
+  background: inherit;
+}
+.msg.first.in::before { left: -8px; clip-path: polygon(100% 0, 0 0, 100% 100%); }
+.msg.first.out::before { right: -8px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.msg .meta {
+  float: right;
+  margin: 6px 0 -5px 12px;
+  display: flex; align-items: center; gap: 3px;
+  font-size: 11px; line-height: 15px;
+  color: var(--bubble-meta);
+  font-variant-numeric: tabular-nums;
+}
+.msg .meta svg { width: 16px; height: 16px; color: var(--read); }
+.msg .meta svg.sent { color: var(--bubble-meta); }
+
+.ticket {
+  display: flex; align-items: center; gap: 10px;
+  margin: -1px -2px 6px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: rgba(11, 20, 26, 0.06);
+}
+:root[data-theme="dark"] .ticket { background: rgba(0, 0, 0, 0.2); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ticket { background: rgba(0, 0, 0, 0.2); }
+}
+.ticket .doc {
+  width: 36px; height: 44px; flex: none;
+  border-radius: 4px; background: #e2554a; color: #fff;
+  display: grid; place-items: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+}
+.ticket .t { font-size: 14px; min-width: 0; }
+.ticket .t b { display: block; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ticket .t span { font-size: 12px; color: var(--bubble-meta); }
+
+/* ---------- Composer ---------- */
+.composer {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--header);
+  z-index: 1;
+}
+.composer .field {
+  flex: 1; min-width: 0;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  display: flex; align-items: center;
+}
+.composer .field:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+.composer input {
+  width: 100%; min-width: 0;
+  border: 0; background: transparent; outline: none;
+  font: inherit; font-size: 15px; color: var(--text);
+}
+.composer input::placeholder { color: var(--text-2); }
+.send {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--accent); color: var(--accent-ink);
+  flex: none;
+}
+.send:hover { filter: brightness(1.06); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+</style>
+
+<!-- Icon sprite -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-search" viewBox="0 0 24 24"><path fill="currentColor" d="M15.9 14.3h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5-5-5Zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9Z"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><path fill="currentColor" d="M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4Z"/></symbol>
+    <symbol id="i-new" viewBox="0 0 24 24"><path fill="currentColor" d="M19.2 3H4.8A1.8 1.8 0 0 0 3 4.8v15.6l3.6-3.6h12.6a1.8 1.8 0 0 0 1.8-1.8V4.8A1.8 1.8 0 0 0 19.2 3ZM17 11.4h-4.4V16h-1.2v-4.6H7V10.2h4.4V5.6h1.2v4.6H17v1.2Z"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path fill="currentColor" d="M20 11H7.8l5.6-5.6L12 4l-8 8 8 8 1.4-1.4L7.8 13H20v-2Z"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><path fill="currentColor" d="M15 8.5V6a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-2.5l5 4v-13l-5 4Z"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path fill="currentColor" d="M6.6 10.8a15 15 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.100.4 2.300.6 3.600.6.600 0 1 .4 1 1V20c0 .600-.4 1-1 1A17 17 0 0 1 3 4c0-.600.400-1 1-1h3.500c.600 0 1 .400 1 1 0 1.300.2 2.500.6 3.600.1.300 0 .7-.2 1l-2.300 2.200Z"/></symbol>
+    <symbol id="i-emoji" viewBox="0 0 24 24"><path fill="currentColor" d="M9.153 11.603a1.2 1.2 0 1 0 0-2.400 1.200 1.200 0 0 0 0 2.400Zm5.700 0a1.2 1.2 0 1 0 0-2.400 1.200 1.200 0 0 0 0 2.400ZM12 20a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm0-18a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-4.300 11.500a5 5 0 0 0 8.600 0l-1.700-1a3 3 0 0 1-5.200 0l-1.700 1Z"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 24 24"><path fill="currentColor" d="M1.800 11.400 11.500 1.700a5.400 5.400 0 0 1 7.700 7.600l-9.500 9.500a3.600 3.600 0 0 1-5.100-5.100l8.500-8.500 1.300 1.300-8.500 8.500a1.800 1.800 0 0 0 2.500 2.500l9.500-9.500a3.600 3.600 0 1 0-5.100-5.100l-9.700 9.700 1.300 1.300Z" transform="translate(1.500 1.500) scale(.875)"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path fill="currentColor" d="M1.100 21.800 23 12.400 1.100 3 1 10.300l15.700 2.100L1 14.500l.1 7.300Z"/></symbol>
+    <symbol id="i-check2" viewBox="0 0 16 11"><path fill="currentColor" d="m11.100.9-.5-.4a.4.4 0 0 0-.5.100L4.700 7.700a.3.3 0 0 1-.5 0L1.900 5.400a.4.4 0 0 0-.5 0l-.4.400a.4.4 0 0 0 0 .5l3.100 3.100c.3.300.7.300 1 0L11.200 1.400a.4.400 0 0 0-.1-.5Zm4 0-.5-.4a.4.4 0 0 0-.5.100L8.700 7.700a.3.300 0 0 1-.5.100l-.6-.6-.4.500 1.100 1.100c.3.300.7.300 1 0L15.200 1.400a.4.4 0 0 0-.1-.5Z"/></symbol>
+    <symbol id="i-check1" viewBox="0 0 16 11"><path fill="currentColor" d="m11.100.9-.5-.4a.4.4 0 0 0-.5.100L4.700 7.700a.3.3 0 0 1-.5 0L1.900 5.400a.4.4 0 0 0-.5 0l-.4.400a.4.4 0 0 0 0 .5l3.100 3.100c.3.300.7.300 1 0L11.200 1.400a.4.4 0 0 0-.1-.5Z"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5.300-3a5.300 5.300 0 0 1-10.600 0H5a7 7 0 0 0 6 6.900V21h2v-3.100A7 7 0 0 0 19 11h-1.700Z"/></symbol>
+    <symbol id="i-cam" viewBox="0 0 24 24"><path fill="currentColor" d="M9 3 7.200 5H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.200L15 3H9Zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></symbol>
+    <symbol id="i-group" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-2.700 0-8 1.300-8 4v2h16v-2c0-2.700-5.300-4-8-4Z"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path fill="currentColor" d="M16 9V4h1V2H7v2h1v5l-2 3v2h5.200v7h1.600v-7H18v-2l-2-3Z"/></symbol>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+
+  <!-- ===== Chat list ===== -->
+  <aside class="sidebar" aria-label="Chats">
+    <div class="side-head">
+      <div class="me">
+        <div class="avatar sm av-9" aria-hidden="true"><svg><use href="#i-group"/></svg></div>
+        <span class="brand">Chats</span>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" aria-label="New chat"><svg width="24" height="24"><use href="#i-new"/></svg></button>
+        <button class="icon-btn" aria-label="Menu"><svg width="24" height="24"><use href="#i-more"/></svg></button>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <label class="search">
+        <svg width="18" height="18"><use href="#i-search"/></svg>
+        <input id="chat-search" type="search" readonly placeholder="Search or start a new chat" autocomplete="off">
+      </label>
+    </div>
+
+    <div class="filters" role="tablist" aria-label="Filter chats">
+      <button class="filter on" role="tab" aria-selected="true">All</button>
+      <button class="filter" role="tab" aria-selected="false">Unread</button>
+      <button class="filter" role="tab" aria-selected="false">Favourites</button>
+      <button class="filter" role="tab" aria-selected="false">Groups</button>
+    </div>
+
+    <ul class="chat-list" id="chat-list">
+      <li>
+        <a class="chat-item active">
+          <div class="avatar av-3">AK</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Amira Khan</span><span class="time unread">6:42 PM</span></div>
+            <div class="row">
+              <div class="preview"><span>Sounds good, see you at 7!</span></div>
+              <span class="badge">2</span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="chat-item">
+          <div class="avatar av-2">DT</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Design Team</span><span class="time unread">6:15 PM</span></div>
+            <div class="row">
+              <div class="preview"><span>Omar: Updated the mockups, take a look</span></div>
+              <span class="badge">5</span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="chat-item">
+          <div class="avatar av-4">M</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Mum</span><span class="time">5:58 PM</span></div>
+            <div class="row">
+              <div class="preview"><svg class="tick read"><use href="#i-check2"/></svg><span>Don't forget to eat dinner</span></div>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="chat-item">
+          <div class="avatar av-5">TH</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Tariq Hassan</span><span class="time">4:20 PM</span></div>
+            <div class="row">
+              <div class="preview"><svg class="tick"><use href="#i-mic"/></svg><span>0:42</span></div>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="chat-item">
+          <div class="avatar av-7">FF</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Friday Football</span><span class="time">3:05 PM</span></div>
+            <div class="row">
+              <div class="preview"><span>Yusuf: Who's in for this week? Need 10</span></div>
+              <span class="badge muted">14</span>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="chat-item">
+          <div class="avatar av-1">SI</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Sara Ibrahim</span><span class="time">Yesterday</span></div>
+            <div class="row">
+              <div class="preview"><svg class="tick read"><use href="#i-check2"/></svg><svg class="tick"><use href="#i-cam"/></svg><span>Photo</span></div>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="chat-item">
+          <div class="avatar av-8">IT</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Office IT Support</span><span class="time">Yesterday</span></div>
+            <div class="row">
+              <div class="preview"><span>Your request #4821 has been resolved</span></div>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="chat-item">
+          <div class="avatar av-6">YM</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Yusuf Malik</span><span class="time">Tuesday</span></div>
+            <div class="row">
+              <div class="preview"><svg class="tick"><use href="#i-check2"/></svg><span>Haha, that's great. Send it over</span></div>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="chat-item">
+          <div class="avatar av-3">C</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Cousins</span><span class="time">Monday</span></div>
+            <div class="row">
+              <div class="preview"><span>Layla: Eid plans are confirmed</span></div>
+            </div>
+          </div>
+        </a>
+      </li>
+      <li>
+        <a class="chat-item">
+          <div class="avatar av-2">LA</div>
+          <div class="chat-body">
+            <div class="row"><span class="name">Layla Aziz</span><span class="time">02/10/2026</span></div>
+            <div class="row">
+              <div class="preview"><svg class="tick read"><use href="#i-check2"/></svg><span>Thanks for the recipe!</span></div>
+            </div>
+          </div>
+        </a>
+      </li>
+    </ul>
+  </aside>
+
+</div>
